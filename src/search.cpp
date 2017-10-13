@@ -1,6 +1,6 @@
 #include <algorithm>
-#include <thread>
 #include <stdarg.h>
+#include <boost/thread.hpp>
 
 #include "search.h"
 
@@ -101,13 +101,29 @@ void Tree::SetGPU(std::vector<std::string>& sl_path, std::vector<std::string>& v
 
 			Session* sess_p(NewSession(SessionOptions()));
 			GraphDef graph_p;
-			ReadBinaryProto(Env::Default(), sl_path[i], &graph_p);
-			sess_p->Create(graph_p);
+			Status s = ReadBinaryProto(Env::Default(), sl_path[i], &graph_p);
+			if (!s.ok()) {
+				std::cerr << s;
+				exit(1);
+			}
+			s = sess_p->Create(graph_p);
+			if (!s.ok()) {
+				std::cerr << s;
+				exit(1);
+			}
 
 			Session* sess_v(NewSession(SessionOptions()));
 			GraphDef graph_v;
-			ReadBinaryProto(Env::Default(), vl_path[i], &graph_v);
-			sess_v->Create(graph_v);
+			s = ReadBinaryProto(Env::Default(), vl_path[i], &graph_v);
+			if (!s.ok()) {
+				std::cerr << s;
+				exit(1);
+			}
+			s = sess_v->Create(graph_v);
+			if (!s.ok()) {
+				std::cerr << s;
+				exit(1);
+			}
 
 			sess_policy.push_back(sess_p);
 			sess_value.push_back(sess_v);
@@ -982,7 +998,7 @@ int Tree::SearchTree(	Board& b, double time_limit, double& win_rate,
 		else
 		{
 
-			const auto t1 = std::chrono::system_clock::now();
+			const auto t1 = boost::chrono::system_clock::now();
 			int prev_game_cnt = pn->total_game_cnt;
 			Statistics prev_stat = stat;
 
@@ -1060,8 +1076,8 @@ int Tree::SearchTree(	Board& b, double time_limit, double& win_rate,
 
 			// f. 探索情報を出力する
 			//    Output search information.
-			auto t2 = std::chrono::system_clock::now();
-			auto elapsed_time = (double)std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/1000;
+			auto t2 = boost::chrono::system_clock::now();
+			auto elapsed_time = (double)boost::chrono::duration_cast<boost::chrono::milliseconds>(t2-t1).count()/1000;
 			if(is_errout){
 				PrintLog(log_path, "%d[node] %.1f[sec] %d[playouts] %.1f[pps/thread]\nremaining time=%.1f[sec]\n",
 						node_cnt,
@@ -1169,7 +1185,7 @@ void Tree::ThreadSearchBranch(Board& b, double time_limit, bool is_ponder) {
 
 	int loop_cnt = 0;
 	int initial_game_cnt = pn->total_game_cnt;
-	const auto t1 = std::chrono::system_clock::now();
+	const auto t1 = boost::chrono::system_clock::now();
 
 	mtx_lgr.lock();
 
@@ -1183,7 +1199,7 @@ void Tree::ThreadSearchBranch(Board& b, double time_limit, bool is_ponder) {
 	for (;;){
 		if(value_que_cnt > 192 || policy_que_cnt > 96){
 			// Wait for 1msec if the queue is full.
-			std::this_thread::sleep_for(std::chrono::microseconds(1000)); //1 msec
+			boost::this_thread::sleep_for(boost::chrono::microseconds(1000)); //1 msec
 		}
 		else{
 			Board b_ = b;
@@ -1197,8 +1213,8 @@ void Tree::ThreadSearchBranch(Board& b, double time_limit, bool is_ponder) {
 		// 64回ごとに探索を打ち切るかをチェック
 		// Check whether to terminate the search every 64 times.
 		if (loop_cnt % 64 == 0) {
-			auto t2 = std::chrono::system_clock::now();
-			auto elapsed_time = (double)std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() / 1000;
+			auto t2 = boost::chrono::system_clock::now();
+			auto elapsed_time = (double)boost::chrono::duration_cast<boost::chrono::milliseconds>(t2 - t1).count() / 1000;
 
 			// 制限時間が経過したか、stop_thinkフラグが立ったとき探索終了
 			// Terminate the search when the time limit has elapsed or stop_think flag is set.
@@ -1243,7 +1259,7 @@ void Tree::ThreadSearchBranch(Board& b, double time_limit, bool is_ponder) {
  */
 void Tree::ThreadEvaluate(double time_limit, int gpu_idx, bool is_ponder) {
 
-	const auto t1 = std::chrono::system_clock::now();
+	const auto t1 = boost::chrono::system_clock::now();
 	std::deque<ValueEntry> vque_th;
 	std::deque<PolicyEntry> pque_th;
 	std::vector<FeedTensor> ft_list;
@@ -1355,8 +1371,8 @@ void Tree::ThreadEvaluate(double time_limit, int gpu_idx, bool is_ponder) {
 
 		// 3. 制限時間が経過したか、stop_thinkフラグが立ったとき評価終了
 		//    Terminate evaluation when the time limit has elapsed or stop_think flag is set.
-		auto t2 = std::chrono::system_clock::now();
-		auto elapsed_time = (double)std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/1000;
+		auto t2 = boost::chrono::system_clock::now();
+		auto elapsed_time = (double)boost::chrono::duration_cast<boost::chrono::milliseconds>(t2-t1).count()/1000;
 		if(elapsed_time > time_limit || stop_think){
 			stop_think = true;
 			break;
@@ -1371,23 +1387,26 @@ void Tree::ThreadEvaluate(double time_limit, int gpu_idx, bool is_ponder) {
  *  Search in parallel with thread_cnt threads.
  */
 void Tree::ParallelSearch(double time_limit, Board& b, bool is_ponder){
-	std::vector<std::thread> ths(thread_cnt);
+	std::vector<boost::thread> ths(thread_cnt);
 	std::vector<Board> b_;
 	for(int i=0;i<thread_cnt-gpu_cnt;++i){
 		Board b_tmp = b;
 		b_.push_back(b_tmp);
 	}
 
+	boost::thread::attributes attr;
+	attr.set_stack_size(2097152); // 2MB
+
 	for(int i=0;i<thread_cnt;++i){
 		if(i < gpu_cnt){
-			ths[i] = std::thread(&Tree::ThreadEvaluate, this, time_limit, i, is_ponder);
+			ths[i] = boost::thread(attr, boost::bind(&Tree::ThreadEvaluate, this, time_limit, i, is_ponder));
 		}
 		else{
-			ths[i] = std::thread(&Tree::ThreadSearchBranch, this, std::ref(b_[i - gpu_cnt]), time_limit, is_ponder);
+			ths[i] = boost::thread(attr, boost::bind(&Tree::ThreadSearchBranch, this, std::ref(b_[i - gpu_cnt]), time_limit, is_ponder));
 		}
 	}
 
-	for(std::thread& th : ths) th.join();
+	for(boost::thread& th : ths) th.join();
 }
 
 
@@ -1412,4 +1431,3 @@ void Tree::PrintResult(Board& b){
 	PrintFinalScore(b, stat.game, stat.owner, win_pl, komi, log_path);
 
 }
-

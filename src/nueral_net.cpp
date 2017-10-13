@@ -47,7 +47,11 @@ void PolicyNet(Session* sess, std::vector<FeedTensor>& ft_list,
 	}
 
 	inputs = {{"x_input", pn_x},{"temp", sm_temp}};
-	sess->Run(inputs,{"fc/yfc"},{}, &outputs);
+	auto s = sess->Run(inputs,{"fc/yfc"},{}, &outputs);
+	if (!s.ok()) {
+		std::cerr << s;
+		exit(1);
+	}
 
 	auto output_v = outputs[0].matrix<float>();
 
@@ -103,8 +107,12 @@ void ValueNet(Session* sess, std::vector<FeedTensor>& ft_list,
 	}
 
 	inputs = {{"vn_x", vn_x},{"vn_c", vn_c}};
-	sess->Run(inputs,{"fc2/yfc"},{}, &outputs);
-//	sess->Run(inputs,{"v_fc2/yfc"},{}, &outputs);
+	auto s = sess->Run(inputs,{"fc2/yfc"},{}, &outputs);
+//	auto s = sess->Run(inputs,{"v_fc2/yfc"},{}, &outputs);
+	if (!s.ok()) {
+		std::cerr << s;
+		exit(1);
+	}
 
 	auto out_eigen = outputs[0].matrix<float>();
 	for(int i=0;i<ft_cnt;++i){
