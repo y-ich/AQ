@@ -12,7 +12,7 @@ tf_cc_binary(
   deps = [
     "//tensorflow/core:tensorflow",
   ],
-  copts = ["-I/usr/local/include", "-O3", "-msse4.2"],
+  copts = ["-DCPU_ONLY", "-I/usr/local/include", "-O3", "-msse4.2"],
   linkopts = ["-L/usr/local/lib", "-lboost_thread-mt", "-lboost_chrono"]
 )
 
@@ -22,6 +22,6 @@ tf_cc_binary(
   deps = [
     "//tensorflow/core:tensorflow",
   ],
-  copts = ["-I/usr/local/include", "-msse4.2", "-g", "-fsanitize=address", "-fno-omit-frame-pointer"],
+  copts = ["-DCPU_ONLY", "-I/usr/local/include", "-msse4.2", "-g", "-fsanitize=address", "-fno-omit-frame-pointer"],
   linkopts = ["-L/usr/local/lib", "-fsanitize=address", "-lboost_thread-mt", "-lboost_chrono"]
 )

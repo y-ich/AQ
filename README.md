@@ -1,7 +1,7 @@
 # CPU version of AQ on macOS
 
 AQ is a program of Go game with level of expert players.  
-[CGOS](http://www.yss-aya.com/cgos/19x19/standings.html) rating: 3674 (standings)  
+[CGOS](http://www.yss-aya.com/cgos/19x19/standings.html) rating: 3746 (standings)  
 
 This is a porting version of AQ for macOS without NVIDIA GPU.
 
@@ -14,6 +14,14 @@ This is a porting version of AQ for macOS without NVIDIA GPU.
 
 ### AQ configuration
 Set hardware and time control etc. in 'aq_config.txt.'  
+#### Time controll on CGOS
+The current version does not support `time_setting` command, so you need to change time setting for runnning it on CGOS. Otherwise, AQ often loses due to timeout.  
+
+```
+-main time[sec] =900  
+-byoyomi[sec] =0  
+-time controll =off  
+```
 
 ## Build from source code.
 ```shell
