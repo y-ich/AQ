@@ -13,7 +13,7 @@ tf_cc_binary(
     "//tensorflow/core:tensorflow",
   ],
   copts = ["-DCPU_ONLY", "-I/usr/local/include", "-O3", "-msse4.2"],
-  linkopts = ["-L/usr/local/lib", "-lboost_thread-mt", "-lboost_chrono"]
+  linkopts = ["-L/usr/local/lib", "-lboost_thread-mt", "-lboost_chrono", "-lboost_system"]
 )
 
 tf_cc_binary(

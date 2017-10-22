@@ -1432,7 +1432,7 @@ void Tree::ParallelSearch(double time_limit, Board& b, bool is_ponder){
 			ths[i] = boost::thread(attr, boost::bind(&Tree::ThreadEvaluate, this, time_limit, i, is_ponder));
 		}
 		else{
-			ths[i] = boost::thread(attr, boost::bind(&Tree::ThreadSearchBranch, this, std::ref(b_[i - gpu_cnt]), time_limit, is_ponder));
+			ths[i] = boost::thread(attr, boost::bind(&Tree::ThreadSearchBranch, this, std::ref(b_[i - gpu_cnt]), time_limit, i - gpu_cnt, is_ponder));
 		}
 	}
 
